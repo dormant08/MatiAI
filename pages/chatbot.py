@@ -1,5 +1,5 @@
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 import utils
 
 # Apply styles
@@ -8,31 +8,31 @@ utils.apply_custom_styles()
 # Title
 st.title(utils.get_text("chat_title"))
 
-# Initialize session state if not present
+# Initialize session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 # -------------------------------
-# 🔐 Gemini API Setup (CORRECT WAY)
+# 🔐 Gemini API Setup (CORRECT & STABLE)
 # -------------------------------
 try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-    client = genai.Client(api_key=api_key)
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    model = genai.GenerativeModel("gemini-pro")
 except Exception:
-    client = None
+    model = None
     st.error("⚠️ Please configure your Gemini API Key in Streamlit Secrets.")
 
 # -------------------------------
 # 🤖 Chat UI
 # -------------------------------
-if client:
+if model:
 
     # Show chat history
     for msg in st.session_state.chat_history:
         role = "You" if msg["role"] == "user" else "🌾 माटी AI"
         st.markdown(f"**{role}:** {msg['content']}")
 
-    # Input box
+    # Chat input
     user_input = st.chat_input(utils.get_text("chat_placeholder"))
 
     # Clear chat button
@@ -42,7 +42,7 @@ if client:
             st.session_state.chat_history = []
             st.rerun()
 
-    # When user sends message
+    # Handle user input
     if user_input:
         st.session_state.chat_history.append(
             {"role": "user", "content": user_input}
@@ -52,18 +52,16 @@ if client:
         # System prompt
         system_prompt = (
             "You are an agriculture expert helping Indian farmers, especially in Uttarakhand, "
-            "with crop, soil, weather, and disease guidance."
+            "with crop, soil, weather, and disease guidance. "
+            "Give simple, practical, and easy-to-understand advice."
         )
 
         full_prompt = f"{system_prompt}\n\nUser: {user_input}"
 
-        # Gemini response
+        # Generate response
         with st.spinner(utils.get_text("computing")):
             try:
-                response = client.models.generate_content(
-                    model="gemini-3-flash-preview",
-                    contents=full_prompt
-                )
+                response = model.generate_content(full_prompt)
                 reply = response.text
             except Exception as e:
                 reply = f"❌ Error: {str(e)}"
