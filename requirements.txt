@@ -4,4 +4,4 @@ pandas
 numpy
 scikit-learn
 pillow
-google-generativeai
+google-genai
